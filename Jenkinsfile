@@ -1,51 +1,69 @@
 pipeline {
     agent any
 
-    triggers {
-        pollSCM('H/2 * * * *')
+    environment {
+        RECIPIENT = 'radikhal2000@gmail.com'  
     }
 
     stages {
-        stage('Build') {
+        stage('Install Dependencies') {
             steps {
-                echo 'Building with Maven...'
-                echo 'Tool: Maven'
+                sh 'npm install'
             }
         }
-        stage('Unit and Integration Tests') {
+
+        stage('Run Tests') {
             steps {
-                echo 'Running unit tests...'
-                echo 'Tools: JUnit, TestNG'
+                script {
+                    try {
+                        sh 'npm run test'
+                    } catch (err) {
+                        echo "Test stage failed"
+                        throw err
+                    }
+                }
+            }
+            post {
+                always {
+                    emailext(
+                        subject: "Test Stage - ${currentBuild.currentResult}",
+                        body: "The test stage has completed with result: ${currentBuild.currentResult}",
+                        to: "${RECIPIENT}",
+                        attachmentsPattern: 'test.log',
+                        attachLog: true
+                    )
+                }
             }
         }
-        stage('Code Analysis') {
-            steps {
-                echo 'Analyzing with SonarQube...'
-                echo 'Tool: SonarQube'
-            }
-        }
+
         stage('Security Scan') {
             steps {
-                echo 'Scanning with OWASP Dependency-Check...'
-                echo 'Tool: OWASP Dependency-Check'
+                script {
+                    try {
+                        sh 'npm audit --audit-level=high || true'
+                        sh 'echo \"Security scan completed at $(date)\" > security.log'
+                    } catch (err) {
+                        echo "Security scan failed"
+                        throw err
+                    }
+                }
+            }
+            post {
+                always {
+                    emailext(
+                        subject: "Security Scan - ${currentBuild.currentResult}",
+                        body: "The security scan stage has completed with result: ${currentBuild.currentResult}",
+                        to: "${RECIPIENT}",
+                        attachmentsPattern: 'security.log',
+                        attachLog: true
+                    )
+                }
             }
         }
-        stage('Deploy to Staging') {
+
+        stage('Build (Optional)') {
             steps {
-                echo 'Deploying to staging...'
-                echo 'Tool: AWS CLI or Ansible'
-            }
-        }
-        stage('Integration Tests on Staging') {
-            steps {
-                echo 'Testing with Postman...'
-                echo 'Tool: Postman'
-            }
-        }
-        stage('Deploy to Production') {
-            steps {
-                echo 'Deploying to production...'
-                echo 'Tool: AWS CLI or Ansible'
+                sh 'echo "Build complete!"'
             }
         }
     }
