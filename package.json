@@ -1,0 +1,10 @@
+{
+  "name": "email-notify-pipeline",
+  "version": "1.0.0",
+  "description": "Pipeline with test and security scan email notifications",
+  "scripts": {
+    "test": "echo \"Running test script...\" && echo \"Test completed successfully\" > test.log",
+    "security": "npm audit --audit-level=high || echo \"Audit scan completed\" > security.log"
+  },
+  "dependencies": {}
+}
